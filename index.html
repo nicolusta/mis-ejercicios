@@ -114,7 +114,8 @@ html.vm .lvleg{grid-column:1/-1;margin-left:0;flex-wrap:wrap}
 .card:hover .ph img.b{opacity:1}
 .ph{position:relative;aspect-ratio:3/2;background:#000;overflow:hidden}
 .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.ph img.gif{object-fit:contain}
+.ph img.gif,.ph video.gif{object-fit:contain}
+.ph video{position:absolute;inset:0;width:100%;height:100%;display:block}
 .ph img.b{opacity:0;transition:opacity .25s}
 .noimg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px;background:var(--chip)}
 .badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;border-radius:6px;padding:2px 6px}
@@ -154,7 +155,7 @@ html.vd body{width:1200px}
 html.vd .side{height:calc((100vh - 62px) / var(--z,1))}
 .item .num{font:800 24px/1 "Barlow Condensed",sans-serif;color:var(--muted);padding-top:6px;text-align:center}
 .item .thumb{position:relative;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:#000;cursor:pointer;border:0;padding:0}
-.item .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.item .thumb img,.item .thumb video{width:100%;height:100%;object-fit:cover;display:block}
 .item h4{font:700 19px/1.15 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 6px;cursor:pointer}
 .item h4:hover{text-decoration:underline}
 .sets{display:grid;grid-template-columns:repeat(4,minmax(60px,1fr));gap:6px}
@@ -195,7 +196,7 @@ dialog::backdrop{background:rgba(10,20,24,.6)}
 .r-map .bm-list{font-size:13px;color:var(--muted);margin:8px 0 0;text-align:center}
 .motion,.musc{position:relative;aspect-ratio:3/2;border-radius:10px;overflow:hidden;background:#000}
 .musc{background:var(--chip);aspect-ratio:auto;min-height:100%}
-.motion img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.motion img,.motion video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .musc img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
 .musc .noimg{position:absolute;padding:14px;text-align:center}
 .motion img.b{animation:flip 1.8s steps(1) infinite}
@@ -226,11 +227,11 @@ dialog::backdrop{background:rgba(10,20,24,.6)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .upl{display:flex;flex-direction:column;gap:6px}
 .gifonly{grid-template-columns:minmax(0,420px)}
-.upl .pv{width:100%;aspect-ratio:3/2;object-fit:contain;border-radius:8px;background:var(--chip)}
+.upl .pv{width:100%;aspect-ratio:3/2;object-fit:contain;border-radius:8px;background:var(--chip);display:block}
 .upl small{color:var(--muted);font-size:12px}
 .pick-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;margin-top:10px}
 .pick-row{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--bg)}
-.pick-row img,.pick-row .noimg{position:static;width:72px;aspect-ratio:3/2;object-fit:cover;border-radius:6px;display:grid}
+.pick-row img,.pick-row video,.pick-row .noimg{position:static;width:72px;aspect-ratio:3/2;object-fit:cover;border-radius:6px;display:grid}
 .pick-row b{font-weight:600;display:block;line-height:1.2}
 .pick-row span{font-size:12px;color:var(--muted)}
 .pick-row button{border:0;background:var(--brand);color:var(--brand-ink);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
@@ -252,6 +253,7 @@ dialog::backdrop{background:rgba(10,20,24,.6)}
 .auth-card .switch{border:0;background:none;color:var(--focus);cursor:pointer;margin-top:12px;padding:4px;text-decoration:underline}
 .auth-msg{font-size:14px;margin-top:10px;min-height:1.2em}
 .auth-msg.err{color:var(--p-red)}
+.ver-tag{margin:18px 8px 0;font-size:12px;color:var(--muted)}
 .acct{margin:18px 8px 0;font-size:13px;color:var(--muted);word-break:break-all}
 .acct button{border:0;background:none;color:var(--focus);cursor:pointer;padding:4px 0;text-decoration:underline;display:block}
 @media (max-width:900px){
@@ -388,6 +390,7 @@ html.vm .ic{width:44px;height:34px}
     <div id="rlist"></div>
     <button class="newr" id="newP" hidden>+ Nueva persona</button>
     <div class="acct" id="acct" hidden></div>
+    <p class="ver-tag">Versión 5: videos en bucle</p>
     <div class="vista"><p>Ver la página en versión</p><div class="seg" id="seg" role="group" aria-label="Versión"><button data-v="auto">Automática</button><button data-v="m">Celular</button><button data-v="d">Computador</button></div></div>
   </aside>
   <main id="main"></main>
@@ -751,9 +754,23 @@ function filtered(list, s){
     return true;
   }).sort((a,b) => a.n.localeCompare(b.n,"es"));
 }
+const isVid = u => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u || "");
+function mediaEl(src, cls, extra){
+  return isVid(src)
+    ? `<video class="${cls || ""}" src="${esc(src)}" muted loop playsinline autoplay preload="metadata" ${extra || ""}></video>`
+    : `<img class="${cls || ""}" src="${esc(src)}" alt="" loading="lazy">`;
+}
+let vidObs = null;
+function watchVideos(root){
+  const vids = (root || document).querySelectorAll("video[data-lazy]");
+  if (!vids.length) return;
+  if (!("IntersectionObserver" in window)){ vids.forEach(v => v.play && v.play().catch(() => {})); return; }
+  if (!vidObs) vidObs = new IntersectionObserver(es => es.forEach(e => { const v = e.target; if (e.isIntersecting) v.play().catch(() => {}); else v.pause(); }), { rootMargin: "100px" });
+  vids.forEach(v => vidObs.observe(v));
+}
 function cardImg(x){
   if (!x.main) return `<span class="noimg">Sin imagen</span>`;
-  if (x.gif) return `<img class="gif" src="${esc(x.gif)}" alt="" loading="lazy"><span class="badge">GIF</span>`;
+  if (x.gif) return isVid(x.gif) ? `<video class="gif" src="${esc(x.gif)}" muted loop playsinline preload="metadata" data-lazy></video><span class="badge">VIDEO</span>` : `<img class="gif" src="${esc(x.gif)}" alt="" loading="lazy"><span class="badge">GIF</span>`;
   return `<img src="${esc(x.main)}" alt="" loading="lazy">${x.alt ? `<img class="b" src="${esc(x.alt)}" alt="" loading="lazy">` : ""}`;
 }
 function renderLib(){
@@ -772,6 +789,7 @@ function renderLib(){
     return `<button class="card" data-id="${esc(x.id)}" style="--zc:${zc}"><div class="ph">${cardImg(x)}${x.fav ? `<span class="star" aria-label="Favorito">★</span>` : ""}</div>
       <div class="body"><h3>${esc(x.n)}</h3><div class="tags">${x.im.slice(0,2).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}${x.mp.slice(0,1).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></div></button>`;
   }).join("");
+  watchVideos($("grid"));
 }
 function clearFilters(){
   Object.assign(st,{q:"",zone:"",imp:"",mus:"",tipo:"",nivel:"",fav:false});
@@ -874,7 +892,7 @@ function itemRow(it, i, n){
   const x = findEx(it && it.ex);
   const dis = canWrite ? "" : "disabled";
   const name = x ? x.n : "Ejercicio eliminado de la biblioteca";
-  const img = x && x.main ? `<img src="${esc(x.main)}" alt="" loading="lazy">` : `<span class="noimg">Sin imagen</span>`;
+  const img = x && x.main ? mediaEl(x.main, "", "") : `<span class="noimg">Sin imagen</span>`;
   const v = k => esc(str(it && it[k], k === "note" ? 500 : 40));
   return `<div class="item" data-i="${i}">
     <div class="num">${i+1}</div>
@@ -929,7 +947,7 @@ function openPicker(rid){
     </div>`;
   const draw = () => {
     const res = filtered(all(), ps).slice(0, 150);
-    $("plist").innerHTML = res.length ? res.map(x => `<div class="pick-row">${x.main ? `<img src="${esc(x.main)}" alt="" loading="lazy">` : `<span class="noimg">—</span>`}<div><b>${esc(x.n)}</b><span>${esc([...x.im.slice(0,2),...x.mp.slice(0,1)].join(", "))}</span></div><button data-add="${esc(x.id)}" class="${added.has(x.id)?"done":""}">${added.has(x.id)?"✓ Agregado":"+ Agregar"}</button></div>`).join("") : `<p class="empty">Sin resultados.</p>`;
+    $("plist").innerHTML = res.length ? res.map(x => `<div class="pick-row">${x.main ? (isVid(x.main) ? `<video src="${esc(x.main)}" muted playsinline preload="metadata"></video>` : `<img src="${esc(x.main)}" alt="" loading="lazy">`) : `<span class="noimg">—</span>`}<div><b>${esc(x.n)}</b><span>${esc([...x.im.slice(0,2),...x.mp.slice(0,1)].join(", "))}</span></div><button data-add="${esc(x.id)}" class="${added.has(x.id)?"done":""}">${added.has(x.id)?"✓ Agregado":"+ Agregar"}</button></div>`).join("") : `<p class="empty">Sin resultados.</p>`;
   };
   draw();
   $("pq").addEventListener("input", e => { ps.q = e.target.value; draw(); });
@@ -956,8 +974,8 @@ function openDetail(id){
   const rl = routineList().sort((a,b)=> (a.who||NOWHO).localeCompare(b.who||NOWHO,"es") || rSort(a,b));
   dlg.style.setProperty("--zc", zc);
   const mainFig = x.gif
-    ? `<div class="motion"><img src="${esc(x.gif)}" alt="GIF del ejercicio"></div><figcaption>GIF del ejercicio</figcaption>`
-    : x.main ? `<div class="motion"><img src="${esc(x.main)}" alt="Posición inicial">${x.alt ? `<img class="b" src="${esc(x.alt)}" alt="Posición final">` : ""}</div><figcaption>${canWrite ? "Foto de referencia. Toca Editar para subir tu GIF." : "Foto de referencia"}</figcaption>`
+    ? (isVid(x.gif) ? `<div class="motion"><video src="${esc(x.gif)}" muted loop playsinline autoplay preload="auto"></video></div><figcaption>Video del ejercicio (en bucle)</figcaption>` : `<div class="motion"><img src="${esc(x.gif)}" alt="GIF del ejercicio"></div><figcaption>GIF del ejercicio</figcaption>`)
+    : x.main ? `<div class="motion"><img src="${esc(x.main)}" alt="Posición inicial">${x.alt ? `<img class="b" src="${esc(x.alt)}" alt="Posición final">` : ""}</div><figcaption>${canWrite ? "Foto de referencia. Toca Editar para subir tu GIF o video." : "Foto de referencia"}</figcaption>`
     : `<div class="motion"><span class="noimg">Sin imagen</span></div>`;
   const muscFig = `<div class="bmwrap">${bodyMap(x.mp, x.ms)}<div class="bm-leg"><span><i style="background:var(--p-red)"></i>Principal</span><span><i style="background:var(--bm-s)"></i>Secundario</span></div></div><figcaption>Músculos trabajados (se actualiza solo al editar los músculos)</figcaption>`;
   dlg.innerHTML = `
@@ -1009,12 +1027,13 @@ function openForm(id){
   const dlg = $("dlg"); dlg.onclose = null;
   dlg.style.setProperty("--zc","var(--brand)");
   const up = {f0:undefined, fm:undefined};
+  const setPv0 = src => { const b = $("pv0box"); if (b) b.innerHTML = isVid(src) ? `<video class="pv" src="${esc(src)}" muted loop playsinline autoplay></video>` : `<img class="pv" src="${esc(src)}" alt="">`; };
   dlg.innerHTML = `
   <div class="dlg-head"><h2>${id ? "Editar ejercicio" : "Nuevo ejercicio"}</h2><button class="x" data-act="close" aria-label="Cerrar">✕</button></div>
   <form class="dlg-body form" id="frm">
     <div class="f"><span>Nombre</span><input type="text" name="n" required maxlength="120" value="${esc(x.n)}"></div>
     ${assets ? `<div class="f two gifonly">
-      <div class="upl"><span>GIF del ejercicio</span><img class="pv" id="pv0" src="${esc(x.main)}" alt=""><input type="file" accept="image/gif,image/*" data-slot="f0"><small>GIF animado o foto. Máximo 15 MB.</small>${x.gif ? `<button type="button" class="clear" data-reset="f0">Quitar GIF</button>` : ""}</div>
+      <div class="upl"><span>GIF o video del ejercicio</span><div id="pv0box">${isVid(x.main) ? `<video class="pv" src="${esc(x.main)}" muted loop playsinline autoplay></video>` : `<img class="pv" src="${esc(x.main)}" alt="">`}</div><input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" data-slot="f0"><small>GIF, foto o video corto (MP4, WebM o MOV). El video se reproduce en bucle y sin sonido. Máximo 50 MB.</small>${x.gif ? `<button type="button" class="clear" data-reset="f0">Quitar GIF o video</button>` : ""}</div>
     </div>` : ""}
     <div class="f"><span>Zona</span>${picks("z", ZONES.map(z=>z[0]), x.z)}</div>
     <div class="f"><span>Implemento</span>${picks("im", IMPS, x.im)}</div>
@@ -1028,19 +1047,24 @@ function openForm(id){
   dlg.onclick = e => {
     if (e.target === dlg) return dlg.close();
     const r = e.target.closest("[data-reset]");
-    if (r){ const s = r.dataset.reset; up[s] = ""; if (s === "f0") $("pv0").src = x.photo0 || ""; else $("pvm").removeAttribute("src"); r.remove(); toast("Se quitará al guardar"); return; }
+    if (r){ const s = r.dataset.reset; up[s] = ""; if (s === "f0") setPv0(x.photo0 || ""); else if ($("pvm")) $("pvm").removeAttribute("src"); r.remove(); toast("Se quitará al guardar"); return; }
     if (e.target.closest("[data-act=close]")) id ? openDetail(id) : dlg.close();
   };
   dlg.querySelectorAll("input[type=file]").forEach(inp => inp.addEventListener("change", async () => {
     const f = inp.files && inp.files[0]; if (!f || !assets) return;
     const slot = inp.dataset.slot;
     const isGif = f.type === "image/gif";
-    if (f.size > 15*1024*1024 && isGif){ toast("El archivo es muy pesado (máximo 15 MB)"); return; }
+    const isVideo = /^video\//.test(f.type) || /\.(mp4|webm|mov|m4v)$/i.test(f.name || "");
+    if (isVideo && f.size > 50*1024*1024){ toast("El video es muy pesado (máximo 50 MB). Prueba con uno más corto."); return; }
+    if (isGif && f.size > 15*1024*1024){ toast("El GIF es muy pesado (máximo 15 MB)"); return; }
     try{
-      toast("Subiendo…");
-      const b = isGif ? f : await shrink(f, slot === "fm" ? 1200 : 900);
-      const res = await assets.upload(b, {type: isGif ? "image/gif" : "image/jpeg"});
-      up[slot] = res.id; (slot === "f0" ? $("pv0") : $("pvm")).src = res.url; toast("Imagen lista. Toca Guardar para conservarla.");
+      toast(isVideo ? "Subiendo video… puede tardar un poco" : "Subiendo…");
+      const vtype = isVideo ? (f.type || (/\.webm$/i.test(f.name) ? "video/webm" : /\.mov$/i.test(f.name) ? "video/quicktime" : "video/mp4")) : null;
+      const b = (isGif || isVideo) ? f : await shrink(f, slot === "fm" ? 1200 : 900);
+      const res = await assets.upload(b, {type: isVideo ? vtype : isGif ? "image/gif" : "image/jpeg"});
+      up[slot] = res.id;
+      if (slot === "f0") setPv0(res.url); else if ($("pvm")) $("pvm").src = res.url;
+      toast((isVideo ? "Video listo" : "Imagen lista") + ". Toca Guardar para conservarla.");
     }catch(err){ toast("No se pudo subir (" + (err && err.code || "error") + ")"); }
   }));
   $("frm").addEventListener("submit", async e => {
@@ -1151,7 +1175,7 @@ function mkDb(){
 const mkAssets = () => ({
   async upload(file, opts){
     const type = (opts && opts.type) || file.type || "image/jpeg";
-    const ext = type === "image/gif" ? "gif" : type === "image/png" ? "png" : "jpg";
+    const ext = type === "image/gif" ? "gif" : type === "image/png" ? "png" : type === "video/webm" ? "webm" : type === "video/quicktime" ? "mov" : /^video\//.test(type) ? "mp4" : "jpg";
     const rnd = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
     const path = `${uid}/${rnd}.${ext}`;
     const { error } = await sb.storage.from("imagenes").upload(path, file, { contentType: type, upsert: false });

@@ -390,7 +390,7 @@ html.vm .ic{width:44px;height:34px}
     <div id="rlist"></div>
     <button class="newr" id="newP" hidden>+ Nueva persona</button>
     <div class="acct" id="acct" hidden></div>
-    <p class="ver-tag">Versión 5: videos en bucle</p>
+    <p class="ver-tag">Versión 6: sin etiquetas de GIF o video</p>
     <div class="vista"><p>Ver la página en versión</p><div class="seg" id="seg" role="group" aria-label="Versión"><button data-v="auto">Automática</button><button data-v="m">Celular</button><button data-v="d">Computador</button></div></div>
   </aside>
   <main id="main"></main>
@@ -770,7 +770,7 @@ function watchVideos(root){
 }
 function cardImg(x){
   if (!x.main) return `<span class="noimg">Sin imagen</span>`;
-  if (x.gif) return isVid(x.gif) ? `<video class="gif" src="${esc(x.gif)}" muted loop playsinline preload="metadata" data-lazy></video><span class="badge">VIDEO</span>` : `<img class="gif" src="${esc(x.gif)}" alt="" loading="lazy"><span class="badge">GIF</span>`;
+  if (x.gif) return isVid(x.gif) ? `<video class="gif" src="${esc(x.gif)}" muted loop playsinline preload="metadata" data-lazy></video>` : `<img class="gif" src="${esc(x.gif)}" alt="" loading="lazy">`;
   return `<img src="${esc(x.main)}" alt="" loading="lazy">${x.alt ? `<img class="b" src="${esc(x.alt)}" alt="" loading="lazy">` : ""}`;
 }
 function renderLib(){
@@ -974,7 +974,7 @@ function openDetail(id){
   const rl = routineList().sort((a,b)=> (a.who||NOWHO).localeCompare(b.who||NOWHO,"es") || rSort(a,b));
   dlg.style.setProperty("--zc", zc);
   const mainFig = x.gif
-    ? (isVid(x.gif) ? `<div class="motion"><video src="${esc(x.gif)}" muted loop playsinline autoplay preload="auto"></video></div><figcaption>Video del ejercicio (en bucle)</figcaption>` : `<div class="motion"><img src="${esc(x.gif)}" alt="GIF del ejercicio"></div><figcaption>GIF del ejercicio</figcaption>`)
+    ? (isVid(x.gif) ? `<div class="motion"><video src="${esc(x.gif)}" muted loop playsinline autoplay preload="auto"></video></div>` : `<div class="motion"><img src="${esc(x.gif)}" alt="Ejercicio"></div>`)
     : x.main ? `<div class="motion"><img src="${esc(x.main)}" alt="Posición inicial">${x.alt ? `<img class="b" src="${esc(x.alt)}" alt="Posición final">` : ""}</div><figcaption>${canWrite ? "Foto de referencia. Toca Editar para subir tu GIF o video." : "Foto de referencia"}</figcaption>`
     : `<div class="motion"><span class="noimg">Sin imagen</span></div>`;
   const muscFig = `<div class="bmwrap">${bodyMap(x.mp, x.ms)}<div class="bm-leg"><span><i style="background:var(--p-red)"></i>Principal</span><span><i style="background:var(--bm-s)"></i>Secundario</span></div></div><figcaption>Músculos trabajados (se actualiza solo al editar los músculos)</figcaption>`;

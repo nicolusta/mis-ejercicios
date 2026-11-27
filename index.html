@@ -227,6 +227,9 @@ dialog::backdrop{background:rgba(10,20,24,.6)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .upl{display:flex;flex-direction:column;gap:6px}
 .gifonly{grid-template-columns:minmax(0,420px)}
+.urlrow{display:flex;gap:6px;margin-top:4px}
+.urlrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:8px 10px}
+.urlrow .b2{padding:8px 12px;white-space:nowrap}
 .upl .pv{width:100%;aspect-ratio:3/2;object-fit:contain;border-radius:8px;background:var(--chip);display:block}
 .upl small{color:var(--muted);font-size:12px}
 .pick-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;margin-top:10px}
@@ -390,7 +393,7 @@ html.vm .ic{width:44px;height:34px}
     <div id="rlist"></div>
     <button class="newr" id="newP" hidden>+ Nueva persona</button>
     <div class="acct" id="acct" hidden></div>
-    <p class="ver-tag">Versión 6: sin etiquetas de GIF o video</p>
+    <p class="ver-tag">Versión 7: imágenes por dirección (URL)</p>
     <div class="vista"><p>Ver la página en versión</p><div class="seg" id="seg" role="group" aria-label="Versión"><button data-v="auto">Automática</button><button data-v="m">Celular</button><button data-v="d">Computador</button></div></div>
   </aside>
   <main id="main"></main>
@@ -479,7 +482,7 @@ const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-
 const arr = v => Array.isArray(v) ? v.filter(x => typeof x === "string") : [];
 const str = (v, max) => typeof v === "string" ? v.slice(0, max||500) : "";
 let STORAGE_PREFIX = "";
-const blob = a => (typeof a === "string" && STORAGE_PREFIX && a.startsWith(STORAGE_PREFIX) && !/["'<>\s]/.test(a)) ? a : "";
+const blob = a => (typeof a === "string" && /^https:\/\/[^\s"'<>()]+$/i.test(a) && a.length < 2000) ? a : "";
 const safeUrl = u => (typeof u === "string" && /^https:\/\//i.test(u)) ? u : "";
 const BMAP = Object.fromEntries(BUILTIN.map(b => [b.id, b]));
 
@@ -1033,7 +1036,7 @@ function openForm(id){
   <form class="dlg-body form" id="frm">
     <div class="f"><span>Nombre</span><input type="text" name="n" required maxlength="120" value="${esc(x.n)}"></div>
     ${assets ? `<div class="f two gifonly">
-      <div class="upl"><span>GIF o video del ejercicio</span><div id="pv0box">${isVid(x.main) ? `<video class="pv" src="${esc(x.main)}" muted loop playsinline autoplay></video>` : `<img class="pv" src="${esc(x.main)}" alt="">`}</div><input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" data-slot="f0"><small>GIF, foto o video corto (MP4, WebM o MOV). El video se reproduce en bucle y sin sonido. Máximo 50 MB.</small>${x.gif ? `<button type="button" class="clear" data-reset="f0">Quitar GIF o video</button>` : ""}</div>
+      <div class="upl"><span>GIF o video del ejercicio</span><div id="pv0box">${isVid(x.main) ? `<video class="pv" src="${esc(x.main)}" muted loop playsinline autoplay></video>` : `<img class="pv" src="${esc(x.main)}" alt="">`}</div><input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" data-slot="f0"><small>GIF, foto o video corto (MP4, WebM o MOV). El video se reproduce en bucle y sin sonido. Máximo 50 MB.</small><div class="urlrow"><input type="url" id="mediaUrl" placeholder="O pega aquí la dirección (URL) de una imagen, GIF o video" aria-label="Dirección de la imagen"><button type="button" class="b2" id="useUrl">Usar dirección</button></div>${x.gif ? `<button type="button" class="clear" data-reset="f0">Quitar GIF o video</button>` : ""}</div>
     </div>` : ""}
     <div class="f"><span>Zona</span>${picks("z", ZONES.map(z=>z[0]), x.z)}</div>
     <div class="f"><span>Implemento</span>${picks("im", IMPS, x.im)}</div>
@@ -1067,6 +1070,19 @@ function openForm(id){
       toast((isVideo ? "Video listo" : "Imagen lista") + ". Toca Guardar para conservarla.");
     }catch(err){ toast("No se pudo subir (" + (err && err.code || "error") + ")"); }
   }));
+  const useUrl = () => {
+    const inp = $("mediaUrl"); if (!inp) return;
+    let u = inp.value.trim();
+    if (!u) { toast("Pega primero la dirección de la imagen"); return; }
+    if (/youtube\.com|youtu\.be|instagram\.com|tiktok\.com|vimeo\.com/i.test(u)) { toast("Los links de YouTube, Instagram, TikTok o Vimeo no sirven: necesitas la dirección directa de la imagen o video"); return; }
+    if (!blob(u)) { toast("La dirección debe empezar con https://"); return; }
+    setPv0(u); up.f0 = u;
+    const box = $("pv0box"), el = box && box.firstElementChild;
+    if (el) el.addEventListener("error", () => toast("No se pudo cargar esa dirección. Prueba con otra o sube el archivo."), { once: true });
+    toast("Dirección lista. Toca Guardar para conservarla.");
+  };
+  if ($("useUrl")) $("useUrl").addEventListener("click", useUrl);
+  if ($("mediaUrl")) $("mediaUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); useUrl(); } });
   $("frm").addEventListener("submit", async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
